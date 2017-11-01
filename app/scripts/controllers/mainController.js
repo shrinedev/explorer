@@ -4,20 +4,33 @@ angular.module('ethExplorer')
     .controller('mainCtrl', function ($rootScope, $scope, $location) {
 
         // Display & update block list
-        getETHRates();
-        updateBlockList();
-        updateTXList();
-        updateStats();
-        getHashrate();
+        // getETHRates();
+        // updateBlockList();
+        // updateTXList();
+        // updateStats();
+        // getHashrate();
+        $.when([
+          updateBlockList(),
+          updateTXList(),
+          updateStats(),
+          getHashrate()
+        ])
 
         web3.eth.filter("latest", function(error, result){
           if (!error) {
-            getETHRates();
-            updateBlockList();
-            updateTXList();
-            updateStats();
-            getHashrate();
-            $scope.$apply();
+            // getETHRates();
+            // updateBlockList();
+            // updateTXList();
+            // updateStats();
+            // getHashrate();
+            $.when([
+              updateBlockList(),
+              updateTXList(),
+              updateStats(),
+              getHashrate()
+            ]).then(function(){
+              $scope.$apply();
+            })
           }
         });
 
@@ -74,6 +87,8 @@ angular.module('ethExplorer')
         }
 
         function updateStats() {
+          var dfd = $.Deferred();
+
           $scope.blockNum = web3.eth.blockNumber; // now that was easy
 
           if($scope.blockNum!==undefined){
@@ -164,17 +179,25 @@ angular.module('ethExplorer')
           $scope.versionCurrency = web3.version.ethereum; // TODO: change that to currencyname?
 
           // ready for the future:
-          try { $scope.versionWhisper = web3.version.whisper; }
-          catch(err) {$scope.versionWhisper = err.message; }
-}
+          try {
+            $scope.versionWhisper = web3.version.whisper;
+            dfd.resolve();
+          }
+          catch(err) {
+            $scope.versionWhisper = err.message;
+            dfd.reject(err.message);
+          }
+
+          return dfd.promise();
+        }
 
 
         function getHashrate()	{
-          $.getJSON("https://etherchain.org/api/miningEstimator", function(json) {
+          return $.getJSON("https://etherchain.org/api/miningEstimator", function(json) {
             var hr = json.data[0].hashRate;
             $scope.hashrate = hr;
-       	});
-      }
+         	});
+        }
 
         function getETHRates() {
           $.getJSON("https://coinmarketcap-nexuist.rhcloud.com/api/eth/price", function(json) {
@@ -195,21 +218,29 @@ angular.module('ethExplorer')
         }
 
         function updateTXList() {
+            var dfd = $.Deferred();
+
             var currentTXnumber = web3.eth.blockNumber;
             $scope.txNumber = currentTXnumber;
             $scope.recenttransactions = [];
             for (var i=0; i < 10 && currentTXnumber - i >= 0; i++) {
               $scope.recenttransactions.push(web3.eth.getTransactionFromBlock(currentTXnumber - i));
             }
+
+            return dfd.promise();
         }
 
         function updateBlockList() {
-            var currentBlockNumber = web3.eth.blockNumber;
-            $scope.blockNumber = currentBlockNumber;
-            $scope.blocks = [];
-            for (var i=0; i < 10 && currentBlockNumber - i >= 0; i++) {
-              $scope.blocks.push(web3.eth.getBlock(currentBlockNumber - i));
-            }
+          var dfd = $.Deferred();
+
+          var currentBlockNumber = web3.eth.blockNumber;
+          $scope.blockNumber = currentBlockNumber;
+          $scope.blocks = [];
+          for (var i=0; i < 10 && currentBlockNumber - i >= 0; i++) {
+            $scope.blocks.push(web3.eth.getBlock(currentBlockNumber - i));
+          }
+
+          return dfd.promise();
         }
 
     });
