@@ -1,5 +1,6 @@
 //var cryptoSocket = require('crypto-socket');
 var BigNumber = require('bignumber.js');
+var running = false;
 angular.module('ethExplorer')
     .controller('mainCtrl', function ($rootScope, $scope, $location) {
 
@@ -9,30 +10,41 @@ angular.module('ethExplorer')
         // updateTXList();
         // updateStats();
         // getHashrate();
-        $.when([
-          updateBlockList(),
-          updateTXList(),
-          updateStats(),
-          getHashrate()
-        ])
-
-        web3.eth.filter("latest", function(error, result){
-          if (!error) {
-            // getETHRates();
-            // updateBlockList();
-            // updateTXList();
-            // updateStats();
-            // getHashrate();
+          if(!running){
+            running = true;
             $.when([
               updateBlockList(),
               updateTXList(),
               updateStats(),
               getHashrate()
             ]).then(function(){
-              $scope.$apply();
+              running = false
             })
           }
-        });
+
+          console.log('entering filter');
+          web3.eth.filter("latest", function(error, result){
+            if (!error) {
+              // getETHRates();
+              // updateBlockList();
+              // updateTXList();
+              // updateStats();
+              // getHashrate();
+              $scope.$apply();
+              if(!running){
+                running = true;
+                console.log('running')
+                $.when([
+                  updateBlockList(),
+                  updateTXList(),
+                  updateStats(),
+                  getHashrate()
+                ]).then(function(){
+                  running = false;
+                })
+              }
+            }
+          });
 
         $scope.processRequest= function(){
             var requestStr = $scope.ethRequest;
